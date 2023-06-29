@@ -80,7 +80,6 @@ func (p parser) Parse(any *anypb.Any) (interface{}, error) {
 			}
 		}
 		config.hostDirectiveMap = hostDirectiveMap
-
 		wafMaps := make(wafMaps)
 		for wafName, wafRules := range config.directives {
 			wafConfig := coraza.NewWAFConfig()
