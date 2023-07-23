@@ -1,0 +1,43 @@
+services:
+  httpbin:
+    image: mccutchen/go-httpbin:v2.5.0
+
+  envoy:
+    depends_on:
+      - httpbin
+    image: envoyproxy/envoy:contrib-dev
+    command:
+      - -c
+      - /etc/envoy/envoy.yaml
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+      - ../access.log:/etc/envoy/access.log
+      - ../plugin.so:/etc/envoy/plugin.so
+      - ../plugin/rules:/etc/envoy/rules
+    ports:
+      - 10000:10000
+      - 9999:9999
+    environment:
+      - GODEBUG=cgocheck=0
+
+  ftw:
+    depends_on:
+      - envoy-logs
+      - wasm-logs
+    build: .
+    environment:
+      - FTW_CLOUDMODE
+      - FTW_INCLUDE
+    volumes:
+      - logs:/home/envoy/logs:ro
+      - ../build:/build
+  ftw-memstats:
+    depends_on:
+      - ftw
+    image: debian:11-slim
+    entrypoint: bash
+    command:
+      - -c
+      - "tail -c +0 -f /home/envoy/logs/envoy.log | grep 'Sys: '"
+    volumes:
+      - logs:/home/envoy/logs:ro

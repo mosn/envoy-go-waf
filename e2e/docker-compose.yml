@@ -1,0 +1,25 @@
+services:
+  httpbin:
+    image: mccutchen/go-httpbin:v2.5.0
+  envoy:
+    depends_on:
+      - httpbin
+    image: envoyproxy/envoy:contrib-dev
+    command:
+      - -c
+      - /etc/envoy/envoy.yaml
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+      - ../plugin.so:/etc/envoy/plugin.so
+      - ../plugin/rules:/etc/envoy/rules
+    ports:
+      - 10000:10000
+      - 9999:9999
+    environment:
+      - GODEBUG=cgocheck=0
+  tests:
+    depends_on:
+      - envoy
+    build:
+      context: .
+      dockerfile: ./Dockerfile.curl
