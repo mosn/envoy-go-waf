@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/corazawaf/coraza/v3/types"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
 	"net"
@@ -168,7 +169,7 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			return api.LocalReply
 		}
 	}
-	return api.StopAndBuffer
+	return api.Continue
 }
 
 func (f *filter) DecodeTrailers(trailerMap api.RequestTrailerMap) api.StatusType {
@@ -251,8 +252,8 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 	}
 	bodySize := buffer.Len()
 	if bodySize > 0 {
-		bytes := buffer.Bytes()
-		interruption, _, err := tx.WriteResponseBody(bytes)
+		ResponseBodyBuffer := buffer.Bytes()
+		interruption, _, err := tx.WriteResponseBody(ResponseBodyBuffer)
 		if err != nil {
 			f.callbacks.Log(api.Error, BuildLoggerMessage(api.Error).err(err).msg("Failed to write response body"))
 			f.callbacks.SendLocalReply(http.StatusBadRequest, "", map[string]string{}, 0, "Failed to write response body")
@@ -265,7 +266,7 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			return api.LocalReply
 		}
 	}
-	if endStream {
+	if !endStream {
 		interruption, err := tx.ProcessResponseBody()
 		runtime.GC()
 		if err != nil {
@@ -275,6 +276,7 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 		if interruption != nil {
 			f.isInterruption = true
 			f.processResponseBody = true
+			buffer.Set(bytes.Repeat([]byte("\x00"), bodySize))
 			f.callbacks.Log(api.Error, BuildLoggerMessage(api.Error).err(err).msg("ProcessResponseBody failed"))
 			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "ProcessResponseBody failed")
 			return api.LocalReply
