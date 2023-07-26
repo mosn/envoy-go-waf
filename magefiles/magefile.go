@@ -28,6 +28,9 @@ func Build() error {
 	if err := sh.RunV("chmod", "666", "access.log"); err != nil {
 		return err
 	}
+	if err := sh.RunV("rm", "-rf", "plugin.so"); err != nil {
+		return err
+	}
 	return sh.RunV("go", "build", "-o", "plugin.so", "-buildmode=c-shared", "./plugin")
 }
 

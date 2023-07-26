@@ -1,36 +1,57 @@
 services:
   httpbin:
     image: mccutchen/go-httpbin:v2.5.0
+  chown:
+    image: alpine:3.16
+    command:
+      - /bin/sh
+      - -c
+      - chown -R 101:101 /etc/envoy/logs
+    volumes:
+      - ./logs:/etc/envoy/logs:rw
 
   envoy:
     depends_on:
+      - chown
       - httpbin
     image: envoyproxy/envoy:contrib-dev
     command:
       - -c
       - /etc/envoy/envoy.yaml
+      - --log-path
+      - /etc/envoy/logs/envoy.log
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
       - ../access.log:/etc/envoy/access.log
       - ../plugin.so:/etc/envoy/plugin.so
       - ../plugin/rules:/etc/envoy/rules
-    ports:
-      - 10000:10000
-      - 9999:9999
+      - ./logs:/etc/envoy/logs:rw
     environment:
       - GODEBUG=cgocheck=0
 
+  goFilter-logs:
+    depends_on:
+      - envoy
+    image: debian:11-slim
+    entrypoint: bash
+    command:
+      - -c
+      - tail -c +0 -f /etc/envoy/logs/envoy.log | grep --line-buffered "contrib/golang/filters/http/source/golang_filter" | grep --line-buffered  "error" > /etc/envoy/logs/ftw.log
+    volumes:
+      - ./logs:/etc/envoy/logs:rw
+
   ftw:
     depends_on:
-      - envoy-logs
-      - wasm-logs
-    build: .
+      - goFilter-logs
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     environment:
       - FTW_CLOUDMODE
       - FTW_INCLUDE
     volumes:
-      - logs:/home/envoy/logs:ro
-      - ../build:/build
+      - ./logs:/etc/envoy/logs:ro
+
   ftw-memstats:
     depends_on:
       - ftw
@@ -38,6 +59,6 @@ services:
     entrypoint: bash
     command:
       - -c
-      - "tail -c +0 -f /home/envoy/logs/envoy.log | grep 'Sys: '"
+      - "tail -c +0 -f /etc/envoy/logs/envoy.log | grep 'Sys: '"
     volumes:
-      - logs:/home/envoy/logs:ro
+      - ./logs:/etc/envoy/logs:ro

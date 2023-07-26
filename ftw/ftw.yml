@@ -1,8 +1,9 @@
 ---
-logfile: '/home/envoy/logs/ftw.log'
+logfile: '/etc/envoy/logs/ftw.log'
 testoverride:
   input:
     dest_addr: envoy
+    port: 8090
   ignore:
     # Envoy not compatible tests
     '911100-5': 'Invalid HTTP method. Rejected by Envoy with Error 400'

@@ -10,7 +10,7 @@ step=1
 total_steps=1
 max_retries=15 #seconds for the server reachability timeout
 host=${1:-envoy}
-health_url="http://${host}:80"
+health_url="http://${host}:8090"
 
 # Testing if the server is up
 echo "[$step/$total_steps] Testing application reachability"
@@ -22,7 +22,7 @@ while [[ "$status_code" -eq "000" ]]; do
   let "max_retries--"
   if [[ "$max_retries" -eq 0 ]] ; then
     echo "[Fail] Timeout waiting for response from $health_url, make sure the server is running."
-    echo "Envoy Logs:" && cat /home/envoy/logs/envoy.log
+#    echo "Envoy Logs:" && cat /etc/envoy/logs/envoy.log
     exit 1
   fi
 done
