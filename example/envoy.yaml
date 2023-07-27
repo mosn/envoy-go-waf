@@ -50,6 +50,7 @@ static_resources:
                                   "foo.example.com":"waf1",
                                   "bar.example.com":"waf1"
                                 }
+                              audit_log_path: "/etc/envoy/audit.log"
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

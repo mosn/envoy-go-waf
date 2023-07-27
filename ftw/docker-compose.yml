@@ -26,6 +26,8 @@ services:
       - ../plugin.so:/etc/envoy/plugin.so
       - ../plugin/rules:/etc/envoy/rules
       - ./logs:/etc/envoy/logs:rw
+    ports:
+      - 8090:8090
     environment:
       - GODEBUG=cgocheck=0
 
@@ -36,7 +38,7 @@ services:
     entrypoint: bash
     command:
       - -c
-      - tail -c +0 -f /etc/envoy/logs/envoy.log | grep --line-buffered "contrib/golang/filters/http/source/golang_filter" | grep --line-buffered  "error" > /etc/envoy/logs/ftw.log
+      - tail -c +0 -f /etc/envoy/logs/envoy.log | grep --line-buffered  "info" > /etc/envoy/logs/ftw.log
     volumes:
       - ./logs:/etc/envoy/logs:rw
 
