@@ -38,7 +38,7 @@ services:
     entrypoint: bash
     command:
       - -c
-      - tail -c +0 -f /etc/envoy/logs/envoy.log | grep --line-buffered  "info" > /etc/envoy/logs/ftw.log
+      - tail -c +0 -f /etc/envoy/logs/audit.log | grep --line-buffered  "Critical" > /etc/envoy/logs/ftw.log
     volumes:
       - ./logs:/etc/envoy/logs:rw
 
