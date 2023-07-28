@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"github.com/corazawaf/coraza/v3/types"
-	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
+	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"net"
 	"net/http"
 	"runtime"

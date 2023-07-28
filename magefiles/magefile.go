@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/magefile/mage/sh"
-	"io"
 	"os"
 	"runtime"
 	"strings"
@@ -42,41 +41,6 @@ func RunExample() error {
 // TeardownExample tears down the test environment. Requires docker-compose.
 func TeardownExample() error {
 	return sh.RunV("docker-compose", "--file", "example/docker-compose.yml", "down")
-}
-
-// Coverage runs tests with coverage and race detector enabled.
-func Coverage() error {
-	if err := os.MkdirAll("build", 0755); err != nil {
-		return err
-	}
-	if err := sh.RunV("go", "test", "-race", "-coverprofile=build/coverage.txt", "-covermode=atomic", "-coverpkg=./...", "./..."); err != nil {
-		return err
-	}
-
-	return sh.RunV("go", "tool", "cover", "-html=build/coverage.txt", "-o", "build/coverage.html")
-}
-
-// Format formats code in this repository.
-func Format() error {
-	if err := sh.RunV("go", "mod", "tidy"); err != nil {
-		return err
-	}
-	// addlicense strangely logs skipped files to stderr despite not being erroneous, so use the long sh.Exec form to
-	// discard stderr too.
-	if _, err := sh.Exec(map[string]string{}, io.Discard, io.Discard, "go", "run", fmt.Sprintf("github.com/google/addlicense@%s", addLicenseVersion),
-		"-c", "The OWASP Coraza contributors",
-		"-s=only",
-		"-y=",
-		"-ignore", "**/*.yml",
-		"-ignore", "**/*.yaml",
-		"-ignore", "examples/**", "."); err != nil {
-		return err
-	}
-	return sh.RunV("go", "run", fmt.Sprintf("github.com/rinchsan/gosimports/cmd/gosimports@%s", gosImportsVer),
-		"-w",
-		"-local",
-		"github.com/corazawaf/coraza-proxy-wasm",
-		".")
 }
 
 // E2e runs e2e tests with a built plugin against the example deployment. Requires docker-compose.

@@ -4,16 +4,14 @@ Web Application Firewall Go filter built on top of [Coraza](https://github.com/c
 
 ## Getting started
 
-`go run mage.go -l` lists all the available commands:
+`go run mage.go` lists all the available commands:
 
 ```bash
-▶ go run mage.go -l
+▶ go run mage.go
 Targets:
   build              builds the Coraza goFilter plugin.
-  coverage           runs tests with coverage and race detector enabled.
   doc                runs godoc, access at http://localhost:6060
   e2e                runs e2e tests with a built plugin against the example deployment.
-  format             formats code in this repository.
   ftw                runs ftw tests with a built plugin and Envoy.
   runExample         spins up the test environment, access at http://localhost:8080.
 
