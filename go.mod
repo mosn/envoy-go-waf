@@ -5,16 +5,16 @@ go 1.19
 require (
 	github.com/cncf/xds/go v0.0.0-20230428030218-4003588d1b74
 	github.com/corazawaf/coraza/v3 v3.0.0-rc.2
-	github.com/envoyproxy/envoy v1.26.1
+	github.com/envoyproxy/envoy v1.27.0
 	github.com/json-iterator/go v1.1.12
-	google.golang.org/protobuf v1.30.0
+	github.com/magefile/mage v1.14.0
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
 	github.com/corazawaf/libinjection-go v0.1.2 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.1.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/magefile/mage v1.14.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20211021192214-5ab2d9280aa9 // indirect
@@ -29,5 +29,5 @@ require (
 	rsc.io/binaryregexp v0.2.0 // indirect
 )
 
-replace github.com/envoyproxy/envoy v1.26.1 => C:\Users\86150\GolandProjects\pkg\mod\github.com\envoyproxy\envoy
+//replace github.com/envoyproxy/envoy v1.26.1 => C:\Users\86150\GolandProjects\pkg\mod\github.com\envoyproxy\envoy
 //replace github.com/envoyproxy/envoy v1.26.1 => /root/go/pkg/mod/github.com/envoyproxy/envoy
