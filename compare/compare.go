@@ -27,6 +27,7 @@ func main() {
 func testEnvoyGo() {
 	envoyGoStressInfo := make([]*testingInfo, 0, 20)
 	hostInfo := make([]*collect.HostInfo, 0, 20)
+	//If you want to change the scope of the qps test, you can adjust the for loop
 	for i := 50; i <= 1000; i += 50 {
 		hostInfoChan := make(chan *collect.HostInfo)
 		startEnvoyDockerGO()
@@ -40,7 +41,7 @@ func testEnvoyGo() {
 			panic(err)
 		}
 		info := <-hostInfoChan
-		//增加重试机制
+		//Add a retry mechanism
 		if i < 800 && (test.realQps < float64(i-10) || test.realQps > float64(i+10)) {
 			i -= 50
 		} else {

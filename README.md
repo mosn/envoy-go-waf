@@ -14,7 +14,6 @@ Targets:
   e2e                runs e2e tests with a built plugin against the example deployment.
   ftw                runs ftw tests with a built plugin and Envoy.
   runExample         spins up the test environment, access at http://localhost:8080.
-
 ```
 
 ### Building the filter
@@ -102,16 +101,37 @@ FTW_INCLUDE=920410 go run mage.go ftw
 If you want to compare the performance of two plugins, just follow these steps
 1. Pull the Envoy docker image 
 ```bash
-docker pull envoyproxy/envoy: contrib-dev
+docker pull envoyproxy/envoy:contrib-dev
 ```
 2. Set up envoy's upstream server
 
-To do this, we simply need an http server listening on our local machine on port 8081 and providing a get /ping interface
+To do this, we simply need an http server listening on our local machine on port 8081 and providing a `GET /ping` interface
 
-3. Run the compare/compare. Go to (want to test alone Envoy go or delete other methods wasm)
+You can switch to any upstream server by changing the envoy-config.yaml in envoy_go directory or the wasm directory
+
+```yaml
+  clusters:
+    - name: service_gin
+      type: LOGICAL_DNS
+      # Comment out the following line to test on v6 networks
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: service_gin
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 172.17.0.1
+                      port_value: 8081
+```
+Just change the address and port_value
+
+3. Run the compare/compare. With two test function in the example below, if just want to test one delete another can, do not need other operations
 ```golang
 func main() {
     testWasm()
     testEnvoyGo()
 }
 ```
+If you want to more flexible test can change the compare/conpare.go down the code
