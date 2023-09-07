@@ -23,6 +23,7 @@ func main() {
 	testEnvoyGo()
 }
 
+// This method is used to test envoy go with qps ranging from 50-1000
 func testEnvoyGo() {
 	envoyGoStressInfo := make([]*testingInfo, 0, 20)
 	hostInfo := make([]*collect.HostInfo, 0, 20)
@@ -60,6 +61,7 @@ func testEnvoyGo() {
 	}
 }
 
+// This method is used to test wasm with qps ranging from 50-1000
 func testWasm() {
 	wasmStressInfo := make([]*testingInfo, 0, 20)
 	hostInfo := make([]*collect.HostInfo, 0, 20)
@@ -97,6 +99,7 @@ func testWasm() {
 	}
 }
 
+// Test wasm by input qps
 func testWasmOne(qps int) (*testingInfo, *collect.HostInfo) {
 	hostInfoChan := make(chan *collect.HostInfo)
 	startEnvoyDockerWasm()
