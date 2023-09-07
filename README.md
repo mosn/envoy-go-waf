@@ -97,3 +97,21 @@ One can also run a single test by executing:
 ```bash
 FTW_INCLUDE=920410 go run mage.go ftw
 ```
+
+### Use Compare
+If you want to compare the performance of two plugins, just follow these steps
+1. Pull the Envoy docker image 
+```bash
+docker pull envoyproxy/envoy: contrib-dev
+```
+2. Set up envoy's upstream server
+
+To do this, we simply need an http server listening on our local machine on port 8081 and providing a get /ping interface
+
+3. Run the compare/compare. Go to (want to test alone Envoy go or delete other methods wasm)
+```golang
+func main() {
+    testWasm()
+    testEnvoyGo()
+}
+```
