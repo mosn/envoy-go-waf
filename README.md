@@ -75,7 +75,7 @@ In order to run the coraza-proxy-wasm we need to spin up an envoy configuration 
 
 ### Using CRS
 
-you can use the [Core Rule Set](https://github.com/coreruleset/coreruleset) by mount it to the container or you can also mount other rules
+you can use the [Core Rule Set](https://github.com/coreruleset/coreruleset) by mounting it to the container or you can also mount other rules
 
 
 #### Recommendations using CRS with proxy-wasm

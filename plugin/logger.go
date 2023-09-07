@@ -1,24 +1,22 @@
 package main
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"strconv"
 )
 
-func BuildLoggerMessage(level api.LogType) logMessage {
+func BuildLoggerMessage() messageTemplate {
 	buff := make([]byte, 0)
-	return &defaultMessage{level: level, buff: buff}
+	return &defaultMessage{buff: buff}
 }
 
-type logMessage interface {
+type messageTemplate interface {
 	msg(msg string) string
-	str(key, val string) logMessage
-	err(err error) logMessage
+	str(key, val string) messageTemplate
+	err(err error) messageTemplate
 }
 
 type defaultMessage struct {
-	level api.LogType
-	buff  []byte
+	buff []byte
 }
 
 func (d *defaultMessage) msg(msg string) string {
@@ -31,7 +29,7 @@ func (d *defaultMessage) msg(msg string) string {
 	return string(d.buff)
 }
 
-func (d *defaultMessage) str(key, val string) logMessage {
+func (d *defaultMessage) str(key, val string) messageTemplate {
 	d.buff = append(d.buff, ' ')
 	d.buff = append(d.buff, key...)
 	d.buff = append(d.buff, '=')
@@ -39,7 +37,7 @@ func (d *defaultMessage) str(key, val string) logMessage {
 	return d
 }
 
-func (d *defaultMessage) err(err error) logMessage {
+func (d *defaultMessage) err(err error) messageTemplate {
 	if err == nil {
 		return d
 	}

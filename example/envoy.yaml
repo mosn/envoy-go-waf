@@ -11,12 +11,6 @@ static_resources:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: ingress_http
-                access_log:
-                  - name: envoy.file_access_log
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                      path: /etc/envoy/access.log
-                      format: "[%START_TIME%] %REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL% %RESPONSE_CODE%\n"
                 http_filters:
                   - name: envoy.filters.http.golang
                     typed_config:
@@ -62,7 +56,6 @@ static_resources:
                         - match:
                             prefix: "/"
                           route:
-                            host_rewrite_literal: 0.0.0.0:8080
                             cluster: service_gin
 
   clusters:
@@ -77,8 +70,8 @@ static_resources:
               - endpoint:
                   address:
                     socket_address:
-                      address: 0.0.0.0
-                      port_value: 8080
+                      address: 172.17.0.1
+                      port_value: 8081
 admin:
   access_log_path: /dev/null
   address:
