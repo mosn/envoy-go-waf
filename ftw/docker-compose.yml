@@ -18,6 +18,7 @@ services:
     command:
       - -c
       - /etc/envoy/envoy.yaml
+      - --log-format [%Y-%m-%d %T.%f][%t][%l][%n] [%g:%#] %v
       - --log-path
       - /etc/envoy/logs/envoy.log
     volumes:
@@ -38,7 +39,7 @@ services:
     entrypoint: bash
     command:
       - -c
-      - tail -c +0 -f /etc/envoy/logs/audit.log | grep --line-buffered  "Critical" > /etc/envoy/logs/ftw.log
+      - tail -c +0 -f /etc/envoy/logs/envoy.log | grep --line-buffered  "[critical][golang]" > /etc/envoy/logs/ftw.log
     volumes:
       - ./logs:/etc/envoy/logs:rw
 
@@ -54,13 +55,13 @@ services:
     volumes:
       - ./logs:/etc/envoy/logs:ro
 
-  ftw-memstats:
-    depends_on:
-      - ftw
-    image: debian:11-slim
-    entrypoint: bash
-    command:
-      - -c
-      - "tail -c +0 -f /etc/envoy/logs/envoy.log | grep 'Sys: '"
-    volumes:
-      - ./logs:/etc/envoy/logs:ro
+#  ftw-memstats:
+#    depends_on:
+#      - ftw
+#    image: debian:11-slim
+#    entrypoint: bash
+#    command:
+#      - -c
+#      - "tail -c +0 -f /etc/envoy/logs/envoy.log | grep 'Sys: '"
+#    volumes:
+#      - ./logs:/etc/envoy/logs:ro

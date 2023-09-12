@@ -79,7 +79,7 @@ func testWasm() {
 			panic(err)
 		}
 		info := <-hostInfoChan
-		//增加重试机制
+		//Add a retry mechanism
 		if i < 800 && (test.realQps < float64(i-10) || test.realQps > float64(i+10)) {
 			i -= 50
 		} else {

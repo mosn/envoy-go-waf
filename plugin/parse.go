@@ -5,6 +5,8 @@ import (
 	"fmt"
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/corazawaf/coraza/v3"
+	ctypes "github.com/corazawaf/coraza/v3/types"
+	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 	jsoniter "github.com/json-iterator/go"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -36,7 +38,7 @@ type Directives struct {
 
 type HostDirectiveMap map[string]string
 
-func (p parser) Parse(any *anypb.Any) (interface{}, error) {
+func (p parser) Parse(any *anypb.Any, callbacks api.ConfigCallbackHandler) (interface{}, error) {
 	configStruct := &xds.TypedStruct{}
 	if err := any.UnmarshalTo(configStruct); err != nil {
 		return nil, err
@@ -83,14 +85,14 @@ func (p parser) Parse(any *anypb.Any) (interface{}, error) {
 		wafMaps := make(wafMaps)
 		for wafName, wafRules := range config.directives {
 			wafConfig := coraza.NewWAFConfig()
-			//wafConfig=wafConfig.WithErrorCallback(errorCallback)
+			wafConfig = wafConfig.WithErrorCallback(errorCallback)
 			wafConfig = wafConfig.WithDirectives(strings.Join(wafRules.SimpleDirectives, "\n"))
 			for _, val := range wafRules.DirectivesFiles {
 				wafConfig = wafConfig.WithDirectivesFromFile(val)
 			}
 			waf, err := coraza.NewWAF(wafConfig)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("%s mapping waf init error", wafName))
+				return nil, errors.New(fmt.Sprintf("%s mapping waf init error:%s", wafName, err.Error()))
 			}
 			wafMaps[wafName] = waf
 		}
@@ -101,4 +103,26 @@ func (p parser) Parse(any *anypb.Any) (interface{}, error) {
 
 func (p parser) Merge(parentConfig interface{}, childConfig interface{}) interface{} {
 	panic("TODO")
+}
+
+func errorCallback(error ctypes.MatchedRule) {
+	msg := error.ErrorLog(error.Rule().ID())
+	switch error.Rule().Severity() {
+	case ctypes.RuleSeverityEmergency:
+		api.LogCritical(msg)
+	case ctypes.RuleSeverityAlert:
+		api.LogCritical(msg)
+	case ctypes.RuleSeverityCritical:
+		api.LogCritical(msg)
+	case ctypes.RuleSeverityError:
+		api.LogError(msg)
+	case ctypes.RuleSeverityWarning:
+		api.LogWarn(msg)
+	case ctypes.RuleSeverityNotice:
+		api.LogInfo(msg)
+	case ctypes.RuleSeverityInfo:
+		api.LogInfo(msg)
+	case ctypes.RuleSeverityDebug:
+		api.LogInfo(msg)
+	}
 }

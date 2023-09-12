@@ -259,6 +259,9 @@ func (f *filter) EncodeTrailers(trailerMap api.ResponseTrailerMap) api.StatusTyp
 	return api.Continue
 }
 
+func (f *filter) OnLog() {
+}
+
 func (f *filter) OnDestroy(reason api.DestroyReason) {
 	tx := f.tx
 	if tx != nil {
