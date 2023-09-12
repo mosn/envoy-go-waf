@@ -1,5 +1,6 @@
 ---
 logfile: '/etc/envoy/logs/ftw.log'
+maxmarkerretries: 10
 testoverride:
   input:
     dest_addr: envoy

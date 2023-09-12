@@ -35,5 +35,5 @@ require (
 	rsc.io/binaryregexp v0.2.0 // indirect
 )
 
-//replace github.com/envoyproxy/envoy v1.27.0 => C:\Users\86150\GolandProjects\pkg\mod\github.com\envoyproxy\envoy
+replace github.com/envoyproxy/envoy v1.27.0 => C:\Users\86150\GolandProjects\pkg\mod\github.com\envoyproxy\envoy
 //replace github.com/envoyproxy/envoy v1.27.0 => /root/go/pkg/mod/github.com/envoyproxy/envoy
