@@ -33,7 +33,6 @@ type WafDirectives map[string]Directives
 
 type Directives struct {
 	SimpleDirectives []string `json:"simple_directives"`
-	DirectivesFiles  []string `json:"directives_files"`
 }
 
 type HostDirectiveMap map[string]string
@@ -84,12 +83,7 @@ func (p parser) Parse(any *anypb.Any, callbacks api.ConfigCallbackHandler) (inte
 		config.hostDirectiveMap = hostDirectiveMap
 		wafMaps := make(wafMaps)
 		for wafName, wafRules := range config.directives {
-			wafConfig := coraza.NewWAFConfig()
-			wafConfig = wafConfig.WithErrorCallback(errorCallback)
-			wafConfig = wafConfig.WithDirectives(strings.Join(wafRules.SimpleDirectives, "\n"))
-			for _, val := range wafRules.DirectivesFiles {
-				wafConfig = wafConfig.WithDirectivesFromFile(val)
-			}
+			wafConfig := coraza.NewWAFConfig().WithErrorCallback(errorCallback).WithRootFS(root).WithDirectives(strings.Join(wafRules.SimpleDirectives, "\n"))
 			waf, err := coraza.NewWAF(wafConfig)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("%s mapping waf init error:%s", wafName, err.Error()))
