@@ -7,7 +7,10 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 )
+
+const HOSTPOSTSEPARATOR string = ":"
 
 type filter struct {
 	callbacks           api.FilterCallbackHandler
@@ -32,6 +35,18 @@ func (f *filter) DecodeHeaders(headerMap api.RequestHeaderMap, endStream bool) a
 		waf = f.conf.wafMaps[ruleName]
 	}
 	f.tx = waf.NewTransaction()
+	f.tx.AddRequestHeader("Host", host)
+	var server = host
+	var err error
+	if strings.Contains(host, HOSTPOSTSEPARATOR) {
+		server, _, err = net.SplitHostPort(host)
+		if err != nil {
+			f.callbacks.Log(api.Info, BuildLoggerMessage().str("Host", host).err(err).msg("Failed to parse server name from Host"))
+			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "Failed to parse server name from Host")
+			return api.LocalReply
+		}
+	}
+	f.tx.SetServerName(server)
 	tx := f.tx
 	//X-Coraza-Rule-Engine: Off  This can be set through the request header
 	if tx.IsRuleEngineOff() {
@@ -66,14 +81,6 @@ func (f *filter) DecodeHeaders(headerMap api.RequestHeaderMap, endStream bool) a
 		tx.AddRequestHeader(key, value)
 		return true
 	})
-	tx.AddRequestHeader("Host", host)
-	server, _, err := net.SplitHostPort(host)
-	if err != nil {
-		f.callbacks.Log(api.Info, BuildLoggerMessage().str("Host", host).err(err).msg("Failed to parse server name from Host"))
-		f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "Failed to parse server name from Host")
-		return api.LocalReply
-	}
-	tx.SetServerName(server)
 	interruption := tx.ProcessRequestHeaders()
 	if interruption != nil {
 		f.isInterruption = true
@@ -100,10 +107,11 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 		return api.Continue
 	}
 	if !tx.IsRequestBodyAccessible() {
-		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("RequestBody Not Accessible,Skipping request body inspection"))
+		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("Skipping request body inspection, SecRequestBodyAccess is off"))
+		f.processRequestBody = true
 		interruption, err := tx.ProcessRequestBody()
 		if err != nil {
-			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessRequestBody error"))
+			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Failed to process request body"))
 			return api.Continue
 		}
 		if interruption != nil {
@@ -112,6 +120,7 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "Reject because of bad request body")
 			return api.LocalReply
 		}
+		return api.Continue
 	}
 	bodySize := buffer.Len()
 	if bodySize > 0 {
@@ -119,8 +128,7 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 		interruption, _, err := tx.WriteRequestBody(bytes)
 		if err != nil {
 			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Failed to write request body"))
-			f.callbacks.SendLocalReply(http.StatusBadRequest, "", map[string]string{}, 0, "Failed to write request body")
-			return api.LocalReply
+			return api.Continue
 		}
 		if interruption != nil {
 			f.isInterruption = true
@@ -130,10 +138,10 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 		}
 	}
 	if endStream {
-		interruption, err := tx.ProcessRequestBody()
 		f.processRequestBody = true
+		interruption, err := tx.ProcessRequestBody()
 		if err != nil {
-			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessRequestBody error"))
+			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Failed to process request body"))
 			return api.Continue
 		}
 		if interruption != nil {
@@ -142,8 +150,9 @@ func (f *filter) DecodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "ProcessRequestBody failed")
 			return api.LocalReply
 		}
+		return api.Continue
 	}
-	return api.Continue
+	return api.StopAndBuffer
 }
 
 func (f *filter) DecodeTrailers(trailerMap api.RequestTrailerMap) api.StatusType {
@@ -152,8 +161,8 @@ func (f *filter) DecodeTrailers(trailerMap api.RequestTrailerMap) api.StatusType
 
 func (f filter) EncodeHeaders(headerMap api.ResponseHeaderMap, endStream bool) api.StatusType {
 	if f.isInterruption {
-		f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "Interruption already handled")
-		return api.LocalReply
+		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("Interruption already handled, sending downstream the local response"))
+		return api.Continue
 	}
 	if f.tx == nil {
 		return api.Continue
@@ -163,11 +172,11 @@ func (f filter) EncodeHeaders(headerMap api.ResponseHeaderMap, endStream bool) a
 		return api.Continue
 	}
 	if !f.processRequestBody {
-		f.callbacks.Log(api.Info, BuildLoggerMessage().msg("ProcessRequestBodyInPause3"))
-		interruption, err := tx.ProcessRequestBody()
+		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("ProcessRequestBodyInPause3"))
 		f.processRequestBody = true
+		interruption, err := tx.ProcessRequestBody()
 		if err != nil {
-			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessRequestBody error"))
+			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Failed to process request body"))
 			return api.Continue
 		}
 		if interruption != nil {
@@ -177,14 +186,14 @@ func (f filter) EncodeHeaders(headerMap api.ResponseHeaderMap, endStream bool) a
 			return api.LocalReply
 		}
 	}
-	headerMap.Range(func(key, value string) bool {
-		tx.AddResponseHeader(key, value)
-		return true
-	})
 	code, b := f.callbacks.StreamInfo().ResponseCode()
 	if !b {
 		code = 0
 	}
+	headerMap.Range(func(key, value string) bool {
+		tx.AddResponseHeader(key, value)
+		return true
+	})
 	interruption := tx.ProcessResponseHeaders(int(code), f.httpProtocol)
 	if interruption != nil {
 		f.isInterruption = true
@@ -204,31 +213,33 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 		return api.Continue
 	}
 	tx := f.tx
+	bodySize := buffer.Len()
 	if tx.IsRuleEngineOff() {
 		return api.Continue
 	}
 	if !tx.IsResponseBodyAccessible() {
-		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("ResponseBody Not Accessible,Skipping response body inspection"))
-		interruption, err := tx.ProcessResponseBody()
-		if err != nil {
-			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessResponseBody error"))
-			return api.Continue
-		}
-		if interruption != nil {
-			f.isInterruption = true
-			f.callbacks.Log(api.Info, BuildLoggerMessage().msg("ProcessResponseBody forbidden"))
-			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "ProcessResponseBody forbidden")
-			return api.LocalReply
+		f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("Skipping response body inspection, SecResponseBodyAccess is off"))
+		if !f.processResponseBody {
+			interruption, err := tx.ProcessResponseBody()
+			if err != nil {
+				f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessResponseBody error"))
+				return api.Continue
+			}
+			f.processResponseBody = true
+			if interruption != nil {
+				f.isInterruption = true
+				f.callbacks.Log(api.Info, BuildLoggerMessage().msg("ProcessResponseBody forbidden"))
+				f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "ProcessResponseBody forbidden")
+				return api.LocalReply
+			}
 		}
 	}
-	bodySize := buffer.Len()
 	if bodySize > 0 {
 		ResponseBodyBuffer := buffer.Bytes()
 		interruption, _, err := tx.WriteResponseBody(ResponseBodyBuffer)
 		if err != nil {
 			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Failed to write response body"))
-			f.callbacks.SendLocalReply(http.StatusBadRequest, "", map[string]string{}, 0, "Failed to write response body")
-			return api.LocalReply
+			return api.Continue
 		}
 		if interruption != nil {
 			f.isInterruption = true
@@ -237,7 +248,8 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			return api.LocalReply
 		}
 	}
-	if !endStream {
+	if endStream {
+		f.processResponseBody = true
 		interruption, err := tx.ProcessResponseBody()
 		if err != nil {
 			f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("ProcessResponseBody error"))
@@ -251,8 +263,9 @@ func (f *filter) EncodeData(buffer api.BufferInstance, endStream bool) api.Statu
 			f.callbacks.SendLocalReply(http.StatusForbidden, "", map[string]string{}, 0, "Reject because of bad response body")
 			return api.LocalReply
 		}
+		return api.Continue
 	}
-	return api.Continue
+	return api.StopAndBuffer
 }
 
 func (f *filter) EncodeTrailers(trailerMap api.ResponseTrailerMap) api.StatusType {
@@ -266,13 +279,15 @@ func (f *filter) OnDestroy(reason api.DestroyReason) {
 	tx := f.tx
 	if tx != nil {
 		if !f.processResponseBody {
+			f.callbacks.Log(api.Debug, BuildLoggerMessage().msg("Running ProcessResponseBody in OnHttpStreamDone, triggered actions will not be enforced. Further logs are for detection only purposes"))
+			f.processResponseBody = true
 			_, err := tx.ProcessResponseBody()
 			if err != nil {
 				f.callbacks.Log(api.Info, BuildLoggerMessage().err(err).msg("Process response body onDestroy error"))
 			}
 		}
-		tx.ProcessLogging()
-		_ = tx.Close()
+		f.tx.ProcessLogging()
+		_ = f.tx.Close()
 		f.callbacks.Log(api.Info, BuildLoggerMessage().msg("Finished"))
 	}
 }

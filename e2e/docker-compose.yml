@@ -11,7 +11,6 @@ services:
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
       - ../plugin.so:/etc/envoy/plugin.so
-      - ../plugin/rules:/etc/envoy/rules
     ports:
       - 8081:8081
       - 9999:9999
